@@ -2,6 +2,8 @@
 
 Ein interaktiver Kostenrechner für 3D-Drucker, mit Fokus auf realistische Strom- und Filamentkosten-Berechnung.
 
+(https://cabcom13.github.io/3D-Druck-Kostenrechner/)
+
 ## Features
 
 - Über 30 vordefinierte 3D-Drucker-Modelle
