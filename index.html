@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D-Druck Kostenrechner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#9aa4b2;
+      --accent:#7c3aed;
+      --glass: rgba(255,255,255,0.04);
+      --success: #10b981;
+      --warning: #f59e0b;
+      font-family: 'Inter', sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#071026 0%, #081026 60%);color:#e6eef6;min-height:100vh;padding:24px}
+    .container{max-width:1200px;margin:0 auto}
+    .header{display:flex;gap:16px;align-items:center;margin-bottom:24px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#3b82f6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+    h1{font-size:24px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1fr 400px;gap:24px;margin-bottom:24px}
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    @media (max-width:1024px){
+      .grid{grid-template-columns:1fr}
+      .charts-grid{grid-template-columns:1fr}
+    }
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:20px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.02)}
+    .card h3{margin:0 0 16px 0;font-size:18px}
+    .form-row{display:flex;gap:12px;margin-bottom:14px}
+    .form-col{flex:1}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+    input, select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:var(--glass);color:#e6eef6;font-size:14px;transition:border-color 0.2s}
+    input:focus, select:focus{outline:none;border-color:var(--accent)}
+    select{background:var(--card);color:#e6eef6}
+    select option{background:var(--card);color:#e6eef6;padding:8px}
+    .calc-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#4f46e5);border:none;color:white;font-weight:600;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,0.18);transition:transform 0.2s}
+    .calc-btn:hover{transform:translateY(-1px)}
+    .secondary{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--muted);padding:10px 14px;border-radius:10px;cursor:pointer;transition:all 0.2s}
+    .secondary:hover{border-color:var(--accent);color:white}
+    .results{display:flex;flex-direction:column;gap:12px}
+    .result-row{display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+    .result-row strong{font-size:16px;font-weight:600}
+    .result-row.highlight{background:linear-gradient(90deg, rgba(124,58,237,0.1), rgba(79,70,229,0.05));border-color:var(--accent)}
+    .muted{color:var(--muted);font-size:13px}
+    .kpi{display:flex;gap:12px;margin-top:16px}
+    .kpi .metric{flex:1;padding:14px;border-radius:10px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));text-align:center;border:1px solid rgba(255,255,255,0.02)}
+    .metric .val{font-weight:700;font-size:20px}
+    .metric .lbl{font-size:12px;color:var(--muted);margin-top:4px}
+    .footer-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+    .hint{font-size:11px;color:var(--muted);margin-top:4px;opacity:0.8}
+    .chart-container{height:280px;margin-top:16px}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .stat{text-align:center;padding:12px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .stat-value{font-size:18px;font-weight:600;color:var(--accent)}
+    .stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+    .comparison{margin-top:16px;padding:14px;border-radius:10px;background:linear-gradient(90deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2)}
+    .comparison-title{font-size:12px;color:var(--success);font-weight:600;margin-bottom:8px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">3D</div>
+      <div>
+        <h1>3D‑Druck Kostenrechner</h1>
+        <p class="lead">Detaillierte Kostenanalyse mit interaktiven Diagrammen und Vergleichen</p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>🔧 Eingaben</h3>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Druckermodell</label>
+            <select id="printerModel"></select>
+            <div class="hint">Wähle ein Modell — Leistung wird automatisch gesetzt</div>
+          </div>
+          <div class="form-col">
+            <label>Eigener Drucker</label>
+            <div style="display:flex;gap:8px">
+              <input id="customPrinterName" type="text" placeholder="z.B. Mein Drucker" style="flex:2">
+              <input id="customPrinterPower" type="number" placeholder="Watt" min="0" step="1" style="flex:1">
+            </div>
+            <div class="hint">Name + Watt eingeben, dann "+" klicken</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <button type="button" class="secondary" id="addCustomPrinter" style="width:100%">+ Eigenen Drucker hinzufügen</button>
+          </div>
+          <div class="form-col">
+            <button type="button" class="secondary" id="removePrinter" style="width:100%">🗑️ Ausgewählten entfernen</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Filamentpreis (€/kg)</label>
+            <input id="priceKg" type="number" min="0" step="0.01" value="25">
+            <div class="hint">z.B. 25 € pro kg PLA</div>
+          </div>
+          <div class="form-col">
+            <label>Gewicht pro Teil (g)</label>
+            <input id="weightG" type="number" min="0" step="0.1" value="45">
+            <div class="hint">Nettogewicht des gedruckten Teils</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Druckzeit</label>
+            <div style="display:flex;gap:8px">
+              <input id="hours" type="number" min="0" step="0.1" value="2" placeholder="Stunden" style="flex:1">
+              <input id="minutes" type="number" min="0" max="59" step="1" value="30" placeholder="Min" style="flex:1">
+            </div>
+            <div class="hint">Geschätzte reine Druckzeit</div>
+          </div>
+          <div class="form-col">
+            <label>Aufheizzeit (Min)</label>
+            <input id="heatupTime" type="number" min="0" step="1" value="5">
+            <div class="hint">Zeit bis Hotend+Bed Zieltemperatur erreichen</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Energiemodus</label>
+            <select id="energyMode">
+              <option value="detailed">🔬 Detailliert (Aufheizen + Drucken)</option>
+              <option value="simple">⚡ Einfach (Durchschnitt)</option>
+            </select>
+            <div class="hint">Realistische vs. vereinfachte Berechnung</div>
+          </div>
+          <div class="form-col">
+            <label>Druckerleistung (W)</label>
+            <input id="powerW" type="number" min="0" step="1" value="120">
+            <div class="hint">Durchschnittlicher Verbrauch beim Drucken</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Aufheizleistung (W)</label>
+            <input id="heatupPowerW" type="number" min="0" step="1" value="200">
+            <div class="hint">Verbrauch während Aufheizphase</div>
+          </div>
+          <div class="form-col">
+            <label>Strompreis (€/kWh)</label>
+            <input id="costKwh" type="number" min="0" step="0.001" value="0.40">
+            <div class="hint">Aktueller Strompreis in Deutschland</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>Anzahl Teile</label>
+            <input id="pieces" type="number" min="1" step="1" value="1">
+            <div class="hint">Teile pro Druckvorgang</div>
+          </div>
+          <div class="form-col"></div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:12px">
+          <button class="calc-btn" id="calcBtn">📊 Berechnen</button>
+          <button class="secondary" id="resetBtn">🔄 Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>💰 Kosten-Aufschlüsselung</h3>
+        
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-value" id="efficiencyRate">–</div>
+            <div class="stat-label">€/Stunde</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="materialRatio">–</div>
+            <div class="stat-label">Material/Strom</div>
+          </div>
+        </div>
+
+        <div class="results" id="results">
+          <div class="result-row"><div class="muted">💡 Stromkosten gesamt</div><strong id="powerTotal">–</strong></div>
+          <div class="result-row"><div class="muted">🎯 Stromkosten pro Teil</div><strong id="powerPer">–</strong></div>
+          <div class="result-row"><div class="muted">🧵 Filamentkosten gesamt</div><strong id="filamentTotal">–</strong></div>
+          <div class="result-row"><div class="muted">🎯 Filamentkosten pro Teil</div><strong id="filamentPer">–</strong></div>
+          <div class="result-row highlight"><div class="muted"><strong>💵 Gesamtkosten pro Teil</strong></div><strong id="totalPer">–</strong></div>
+          <div class="result-row highlight"><div class="muted"><strong>🎯 Gesamtkosten (alle Teile)</strong></div><strong id="totalAll">–</strong></div>
+        </div>
+
+        <div class="kpi">
+          <div class="metric"><div class="val" id="hoursKpi">–</div><div class="lbl">Druckzeit (h)</div></div>
+          <div class="metric"><div class="val" id="wattKpi">–</div><div class="lbl">Leistung (W)</div></div>
+          <div class="metric"><div class="val" id="energyKpi">–</div><div class="lbl">Verbrauch (kWh)</div></div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="secondary" id="copyBtn">📋 Kopieren</button>
+          <button class="secondary" id="exportCsv">📊 CSV Export</button>
+          <button class="secondary" id="compareBtn">⚖️ Vergleich</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card">
+        <h3>📊 Kostenverteilung</h3>
+        <div class="chart-container">
+          <canvas id="costChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📈 Mengen-Analyse</h3>
+        <div class="chart-container">
+          <canvas id="quantityChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>⚡ Energie & Material</h3>
+        <div class="chart-container">
+          <canvas id="energyChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>💡 Optimierungs-Tipps</h3>
+        <div id="optimizationTips" style="margin-top:16px">
+          <div style="color:var(--muted);font-style:italic">Führe eine Berechnung durch für personalisierte Tipps...</div>
+        </div>
+      </div>
+    </div>
+
+    <footer style="margin-top:24px;color:var(--muted);font-size:12px;text-align:center;padding-top:16px;border-top:1px solid rgba(255,255,255,0.03)">
+      🚀 Entwickelt für präzise 3D-Druck Kostenkalkulation • Feedback willkommen
+    </footer>
+  </div>
+
+  <script>
+    const printers = [
+      {name:"Anycubic Kobra 2", power:150, heatup:250, printing:120},
+      {name:"Anycubic Kobra 2 Max", power:165, heatup:300, printing:165},
+      {name:"Anycubic Kobra 2 Pro", power:170, heatup:280, printing:140},
+      {name:"Anycubic Kobra Max", power:220, heatup:320, printing:180},
+      {name:"Anycubic Kobra 3", power:160, heatup:260, printing:130},
+      {name:"Bambu Lab A1", power:80, heatup:120, printing:60},
+      {name:"Bambu Lab A1 mini", power:70, heatup:100, printing:50},
+      {name:"Bambu Lab P1S", power:85, heatup:140, printing:70},
+      {name:"Bambu Lab X1 Carbon", power:90, heatup:150, printing:75},
+      {name:"Creality Ender 3", power:110, heatup:180, printing:90},
+      {name:"Creality Ender 3 V2", power:120, heatup:200, printing:100},
+      {name:"Creality Ender 3 V3 SE", power:105, heatup:170, printing:85},
+      {name:"Creality Ender 3 S1", power:130, heatup:210, printing:110},
+      {name:"Creality CR-10", power:120, heatup:200, printing:100},
+      {name:"Creality CR-10s", power:125, heatup:210, printing:105},
+      {name:"Creality K1", power:100, heatup:160, printing:80},
+      {name:"Creality K1 Max", power:180, heatup:280, printing:150},
+      {name:"Elegoo Neptune 3", power:140, heatup:220, printing:115},
+      {name:"Elegoo Neptune 4", power:145, heatup:230, printing:120},
+      {name:"Flashforge Creator Pro", power:250, heatup:350, printing:200},
+      {name:"Flashforge Adventurer 4", power:180, heatup:260, printing:150},
+      {name:"Formlabs Form 3", power:65, heatup:80, printing:45},
+      {name:"Prusa i3 MK3S+", power:135, heatup:200, printing:110},
+      {name:"Prusa i3 MK4", power:140, heatup:210, printing:115},
+      {name:"Prusa Mini+", power:120, heatup:180, printing:95},
+      {name:"Prusa XL", power:200, heatup:320, printing:170},
+      {name:"Qidi Tech X-Max 3", power:220, heatup:350, printing:180},
+      {name:"Raise3D Pro2", power:300, heatup:450, printing:250},
+      {name:"Ultimaker S3", power:200, heatup:280, printing:160},
+      {name:"Ultimaker S5", power:280, heatup:400, printing:230},
+      {name:"Voron 2.4", power:150, heatup:250, printing:120}
+    ];
+
+    const $ = id => document.getElementById(id);
+    let charts = {};
+    let customPrinters = [];
+
+    // Browser storage check
+    function canUseLocalStorage() {
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    if (canUseLocalStorage()) {
+      customPrinters = JSON.parse(localStorage.getItem('customPrinters') || '[]');
+    }
+
+    // Combine default and custom printers
+    function getAllPrinters() {
+      return [...printers, ...customPrinters];
+    }
+
+    // Initialize printer select
+    function updatePrinterSelect() {
+      const printerSelect = $('printerModel');
+      printerSelect.innerHTML = '';
+      
+      // Combine default and custom printers
+      getAllPrinters().forEach((p, index) => {
+        const opt = document.createElement('option');
+        opt.value = p.power;
+        opt.dataset.index = index;
+        opt.dataset.isCustom = index >= printers.length;
+        opt.dataset.heatupPower = p.heatup || p.power;
+        opt.dataset.printingPower = p.printing || p.power;
+        opt.textContent = `${p.name} (~${p.power} W avg)`;
+        printerSelect.appendChild(opt);
+      });
+
+      if(printerSelect.options.length) {
+        printerSelect.selectedIndex = 0;
+        const selectedOption = printerSelect.options[0];
+        $('powerW').value = selectedOption.dataset.printingPower || selectedOption.value;
+        $('heatupPowerW').value = selectedOption.dataset.heatupPower || selectedOption.value;
+      }
+    }
+
+    // Initialize printer select and events
+    const printerSelect = $('printerModel');
+    updatePrinterSelect();
+
+    printerSelect.addEventListener('change', e => {
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      $('powerW').value = selectedOption.dataset.printingPower || selectedOption.value;
+      $('heatupPowerW').value = selectedOption.dataset.heatupPower || selectedOption.value;
+      calc();
+    });
+
+    // Add custom printer functionality
+    $('addCustomPrinter').addEventListener('click', () => {
+      const name = $('customPrinterName').value.trim();
+      const power = parseInt($('customPrinterPower').value);
+      
+      if (!name || !power || power <= 0) {
+        alert('❌ Bitte Namen und gültigen Watt-Wert eingeben!');
+        return;
+      }
+      
+      if (getAllPrinters().some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        alert('❌ Drucker mit diesem Namen existiert bereits!');
+        return;
+      }
+      
+      const newPrinter = { name, power, heatup: Math.round(power * 1.5), printing: power };
+      customPrinters.push(newPrinter);
+      
+      if (canUseLocalStorage()) {
+        localStorage.setItem('customPrinters', JSON.stringify(customPrinters));
+      }
+      
+      updatePrinterSelect();
+      
+      // Select the newly added printer
+      printerSelect.selectedIndex = getAllPrinters().length - 1;
+      $('powerW').value = power;
+      $('heatupPowerW').value = Math.round(power * 1.5);
+      
+      // Clear inputs
+      $('customPrinterName').value = '';
+      $('customPrinterPower').value = '';
+      
+      alert(`✅ "${name}" erfolgreich hinzugefügt!`);
+      calc();
+    });
+
+    // Remove printer functionality
+    $('removePrinter').addEventListener('click', () => {
+      const selectedIndex = printerSelect.selectedIndex;
+      const isCustom = printerSelect.options[selectedIndex]?.dataset.isCustom === 'true';
+      
+      if (!isCustom) {
+        alert('❌ Standard-Drucker können nicht entfernt werden!');
+        return;
+      }
+      
+      const printerName = getAllPrinters()[selectedIndex].name;
+      if (confirm(`🗑️ "${printerName}" wirklich entfernen?`)) {
+        const customIndex = selectedIndex - printers.length;
+        customPrinters.splice(customIndex, 1);
+        
+        if (canUseLocalStorage()) {
+          localStorage.setItem('customPrinters', JSON.stringify(customPrinters));
+        }
+        
+        updatePrinterSelect();
+        calc();
+        alert(`✅ "${printerName}" entfernt!`);
+      }
+    });
+
+    function parseFloatSafe(v, fallback=0){
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function formatEUR(v){
+      return v.toLocaleString('de-DE', {style:'currency', currency:'EUR'});
+    }
+
+    function createCostChart(filamentCost, powerCost) {
+      const ctx = $('costChart').getContext('2d');
+      if(charts.cost) charts.cost.destroy();
+      
+      charts.cost = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Filament', 'Strom'],
+          datasets: [{
+            data: [filamentCost, powerCost],
+            backgroundColor: ['#7c3aed', '#3b82f6'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#e6eef6' }
+            }
+          }
+        }
+      });
+    }
+
+    function createQuantityChart(data) {
+      const ctx = $('quantityChart').getContext('2d');
+      if(charts.quantity) charts.quantity.destroy();
+      
+      const quantities = [1, 5, 10, 20, 50];
+      const costs = quantities.map(q => (data.filamentPer * q + data.powerTotal).toFixed(2));
+      
+      charts.quantity = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: quantities,
+          datasets: [{
+            label: 'Gesamtkosten (€)',
+            data: costs,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#e6eef6' }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Anzahl Teile', color: '#9aa4b2' },
+              ticks: { color: '#9aa4b2' },
+              grid: { color: 'rgba(255,255,255,0.1)' }
+            },
+            y: {
+              title: { display: true, text: 'Kosten (€)', color: '#9aa4b2' },
+              ticks: { color: '#9aa4b2' },
+              grid: { color: 'rgba(255,255,255,0.1)' }
+            }
+          }
+        }
+      });
+    }
+
+    function createEnergyChart(data) {
+      const ctx = $('energyChart').getContext('2d');
+      if(charts.energy) charts.energy.destroy();
+      
+      const energyKwh = (data.powerW * data.timeHours) / 1000;
+      const co2Kg = energyKwh * 0.401; // German energy mix CO2 factor
+      
+      charts.energy = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Energie (kWh)', 'CO₂ (kg)', 'Material (g)'],
+          datasets: [{
+            data: [energyKwh.toFixed(3), co2Kg.toFixed(3), data.weightG],
+            backgroundColor: ['#f59e0b', '#ef4444', '#10b981']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#9aa4b2' },
+              grid: { display: false }
+            },
+            y: {
+              ticks: { color: '#9aa4b2' },
+              grid: { color: 'rgba(255,255,255,0.1)' }
+            }
+          }
+        }
+      });
+    }
+
+    function generateOptimizationTips(data) {
+      const tips = [];
+      const materialRatio = data.filamentPer / (data.filamentPer + data.powerPer);
+      
+      if(materialRatio > 0.8) {
+        tips.push('💡 <strong>Material optimieren:</strong> Prüfe günstigere Filamente oder reduziere Infill');
+      }
+      
+      if(data.powerPer > data.filamentPer) {
+        tips.push('⚡ <strong>Energieeffizienz:</strong> Mehrere Teile gleichzeitig drucken reduziert Strom pro Teil');
+      }
+      
+      if(data.timeHours < 1) {
+        tips.push('🚀 <strong>Klein aber fein:</strong> Bei kurzen Drucken dominieren Aufheizkosten');
+      }
+      
+      if(data.pieces === 1) {
+        tips.push('🎯 <strong>Batch-Produktion:</strong> Mehrere Teile gleichzeitig = bessere Stromeffizienz');
+      }
+      
+      const costPerHour = data.totalPer / data.timeHours;
+      if(costPerHour < 2) {
+        tips.push('✅ <strong>Sehr effizient:</strong> Unter 2€/Stunde ist ein guter Wert');
+      }
+      
+      return tips.length ? tips.join('<br><br>') : '🎉 <strong>Optimale Einstellungen!</strong> Deine Konfiguration ist bereits sehr effizient.';
+    }
+
+    function calc(){
+      const priceKg = parseFloatSafe($('priceKg').value, 0);
+      const weightG = parseFloatSafe($('weightG').value, 0);
+      const hours = parseFloatSafe($('hours').value, 0);
+      const minutes = parseFloatSafe($('minutes').value, 0);
+      const powerW = parseFloatSafe($('powerW').value, 0);
+      const heatupPowerW = parseFloatSafe($('heatupPowerW').value, powerW);
+      const heatupTime = parseFloatSafe($('heatupTime').value, 5);
+      const costKwh = parseFloatSafe($('costKwh').value, 0);
+      const pieces = Math.max(1, Math.floor(parseFloatSafe($('pieces').value,1)));
+      const energyMode = $('energyMode') ? $('energyMode').value : 'detailed';
+
+      const timeHours = hours + (minutes/60);
+      const heatupHours = heatupTime / 60;
+
+      // Filament costs (unchanged)
+      const filamentCostPerGram = priceKg / 1000.0;
+      const filamentTotal = filamentCostPerGram * weightG * pieces;
+      const filamentPer = filamentCostPerGram * weightG;
+
+      // Power costs with detailed calculation
+      let energyKwh, powerTotal, powerPer;
+      
+      if (energyMode === 'detailed') {
+        // Detailed: separate heatup and printing phases
+        const heatupEnergyKwh = (heatupPowerW * heatupHours) / 1000;
+        const printingEnergyKwh = (powerW * timeHours) / 1000;
+        energyKwh = heatupEnergyKwh + printingEnergyKwh;
+        
+        const heatupCost = heatupEnergyKwh * costKwh;
+        const printingCost = printingEnergyKwh * costKwh;
+        powerTotal = heatupCost + printingCost;
+        powerPer = powerTotal / pieces;
+      } else {
+        // Simple: average power consumption
+        energyKwh = (powerW * timeHours) / 1000;
+        powerTotal = energyKwh * costKwh;
+        powerPer = powerTotal / pieces;
+      }
+
+      const totalPer = filamentPer + powerPer;
+      const totalAll = filamentTotal + powerTotal;
+
+      // Update results
+      $('filamentTotal').textContent = formatEUR(filamentTotal);
+      $('filamentPer').textContent = formatEUR(filamentPer);
+      $('powerTotal').textContent = formatEUR(powerTotal);
+      $('powerPer').textContent = formatEUR(powerPer);
+      $('totalPer').textContent = formatEUR(totalPer);
+      $('totalAll').textContent = formatEUR(totalAll);
+
+      $('hoursKpi').textContent = timeHours.toFixed(2);
+      $('wattKpi').textContent = energyMode === 'detailed' ? 
+        `${powerW}/${heatupPowerW}` : powerW;
+      $('energyKpi').textContent = energyKwh.toFixed(3);
+
+      // Efficiency metrics
+      const costPerHour = timeHours > 0 ? (totalPer / timeHours) : 0;
+      $('efficiencyRate').textContent = formatEUR(costPerHour);
+      
+      const materialRatio = filamentPer > 0 && powerPer > 0 ? (filamentPer / powerPer).toFixed(1) + ':1' : '–';
+      $('materialRatio').textContent = materialRatio;
+
+      // Update charts
+      createCostChart(filamentPer, powerPer);
+      createQuantityChart({filamentPer, powerTotal});
+      createEnergyChart({powerW: energyMode === 'detailed' ? 
+        ((powerW * timeHours + heatupPowerW * heatupHours) / (timeHours + heatupHours)) : powerW, 
+        timeHours, weightG});
+
+      // Update optimization tips
+      $('optimizationTips').innerHTML = generateOptimizationTips({
+        priceKg, weightG, timeHours, powerW, costKwh, pieces, energyMode,
+        filamentTotal, filamentPer, powerTotal, powerPer, totalPer, totalAll
+      });
+
+      return {
+        priceKg, weightG, timeHours, powerW, heatupPowerW, heatupTime, costKwh, pieces,
+        filamentTotal, filamentPer, powerTotal, powerPer, totalPer, totalAll, energyKwh, energyMode
+      };
+    }
+
+    // Event listeners - with safety checks
+    ['priceKg','weightG','hours','minutes','powerW','heatupPowerW','heatupTime','costKwh','pieces'].forEach(id=>{
+      const el = $(id);
+      if (el) el.addEventListener('input', calc);
+    });
+
+    const energyModeEl = $('energyMode');
+    if (energyModeEl) {
+      energyModeEl.addEventListener('change', calc);
+    }
+
+    $('calcBtn').addEventListener('click', calc);
+
+    $('resetBtn').addEventListener('click', ()=>{
+      printerSelect.selectedIndex = 0;
+      $('priceKg').value = 25;
+      $('weightG').value = 45;
+      $('hours').value = 2;
+      $('minutes').value = 30;
+      const selectedOption = printerSelect.options[0];
+      $('powerW').value = selectedOption.dataset.printingPower || selectedOption.value;
+      $('heatupPowerW').value = selectedOption.dataset.heatupPower || selectedOption.value;
+      $('heatupTime').value = 5;
+      $('costKwh').value = 0.40;
+      $('pieces').value = 1;
+      const energyModeEl = $('energyMode');
+      if (energyModeEl) energyModeEl.selectedIndex = 0;
+      calc();
+    });
+
+    $('copyBtn').addEventListener('click', ()=>{
+      const r = calc();
+      const text = `🎯 3D-Druck Kostenanalyse\n\n💰 Kosten pro Teil:\n• Filament: ${formatEUR(r.filamentPer)}\n• Strom: ${formatEUR(r.powerPer)}\n• Gesamt: ${formatEUR(r.totalPer)}\n\n📊 Gesamtkosten: ${formatEUR(r.totalAll)}\n⏱️ Druckzeit: ${r.timeHours.toFixed(2)}h\n⚡ Verbrauch: ${r.energyKwh.toFixed(3)} kWh`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(()=>{
+          alert('✅ Detaillierte Kostenanalyse kopiert!');
+        }).catch(()=>{
+          alert('❌ Kopieren fehlgeschlagen');
+        });
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          alert('✅ Detaillierte Kostenanalyse kopiert!');
+        } catch (err) {
+          alert('❌ Kopieren fehlgeschlagen');
+        }
+        document.body.removeChild(textArea);
+      }
+    });
+
+    $('exportCsv').addEventListener('click', ()=>{
+      const r = calc();
+      const printerName = printerSelect.options[printerSelect.selectedIndex].text.replace(/"/g, '""');
+      const csv = `printer,price_kg,weight_g,time_h,power_w,cost_kwh,pieces,energy_kwh,filament_total,filament_per,power_total,power_per,total_per,total_all\n"${printerName}",${r.priceKg},${r.weightG},${r.timeHours},${r.powerW},${r.costKwh},${r.pieces},${r.energyKwh.toFixed(3)},${r.filamentTotal},${r.filamentPer},${r.powerTotal},${r.powerPer},${r.totalPer},${r.totalAll}`;
+      
+      try {
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `3d_druck_analyse_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('❌ CSV Export fehlgeschlagen');
+      }
+    });
+
+    $('compareBtn').addEventListener('click', ()=>{
+      alert('🚀 Vergleichsfunktion kommt bald! Speichere verschiedene Konfigurationen und vergleiche sie direkt.');
+    });
+
+    // Initialize
+    calc();
+  </script>
+</body>
+</html>
